@@ -72,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   brightnessStream: appState.brightnessStream,
                   amplitudeStream: appState.amplitudeStream,
                   frequencyStream: appState.frequencyStream,
+                  maxFreq: appState.maxFreq,
                 ),
                 
               const SizedBox(height: 24),
@@ -242,7 +243,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Filter Tuning (Advanced)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text("Detection Modes & Tuning", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 16),
+
+            // Light Detection Mode
+            SwitchListTile(
+              title: const Text("Light: Auto Mode"),
+              subtitle: const Text("Learns ambient brightness"),
+              value: appState.isLightAutoMode,
+              onChanged: (val) => appState.setLightAutoMode(val),
+              activeColor: AppTheme.accentColor,
+            ),
+            if (!appState.isLightAutoMode)
+              Row(
+                children: [
+                  const Icon(Icons.lightbulb, color: AppTheme.textMuted),
+                  const SizedBox(width: 8),
+                  const Text("Min Brightness:"),
+                  Expanded(
+                    child: Slider(
+                      value: appState.manualLightThreshold,
+                      min: 10.0,
+                      max: 255.0,
+                      divisions: 245,
+                      label: appState.manualLightThreshold.round().toString(),
+                      onChanged: (val) => appState.setManualLightThreshold(val),
+                    ),
+                  ),
+                  Text(appState.manualLightThreshold.round().toString()),
+                ],
+              ),
+            
+            const Divider(),
+
+            // Audio Detection Mode
+            SwitchListTile(
+              title: const Text("Audio: Auto Mode"),
+              subtitle: const Text("Learns ambient background noise"),
+              value: appState.isAudioAutoMode,
+              onChanged: (val) => appState.setAudioAutoMode(val),
+              activeColor: AppTheme.accentColor,
+            ),
+            
             const SizedBox(height: 16),
             
             // Auto Calibration Button

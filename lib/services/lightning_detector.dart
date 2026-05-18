@@ -11,6 +11,8 @@ class LightningDetector {
   final List<double> _brightnessHistory = [];
   
   // Configuration
+  bool isAutoMode = true;
+  double manualThreshold = 150.0;
   final double flashMultiplier = 3.0; // Flash threshold multiplier
   final Duration cooldown = const Duration(seconds: 10);
   
@@ -96,16 +98,27 @@ class LightningDetector {
   }
 
   void _detectFlash(double currentBrightness) {
-    if (_brightnessHistory.length < 10) return; // Need some baseline
+    bool isFlash = false;
 
-    final averageBrightness = _brightnessHistory.reduce((a, b) => a + b) / _brightnessHistory.length;
+    if (isAutoMode) {
+      if (_brightnessHistory.length < 10) return; // Need some baseline
+      final averageBrightness = _brightnessHistory.reduce((a, b) => a + b) / _brightnessHistory.length;
+      
+      // Sudden spike detection
+      if (currentBrightness > averageBrightness * flashMultiplier) {
+        isFlash = true;
+      }
+    } else {
+      if (currentBrightness >= manualThreshold) {
+        isFlash = true;
+      }
+    }
 
-    // Sudden spike detection
-    if (currentBrightness > averageBrightness * flashMultiplier) {
+    if (isFlash) {
       final now = DateTime.now();
       if (_lastDetectionTime == null || now.difference(_lastDetectionTime!) > cooldown) {
         _lastDetectionTime = now;
-        debugPrint("Lightning flash detected! Brightness: $currentBrightness, Avg: $averageBrightness");
+        debugPrint("Lightning flash detected! Brightness: $currentBrightness");
         onFlashDetected?.call();
       }
     }

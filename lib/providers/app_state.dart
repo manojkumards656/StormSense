@@ -55,6 +55,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Light configuration
+  bool get isLightAutoMode => _lightningDetector.isAutoMode;
+  void setLightAutoMode(bool val) {
+    _lightningDetector.isAutoMode = val;
+    notifyListeners();
+  }
+
+  double get manualLightThreshold => _lightningDetector.manualThreshold;
+  void setManualLightThreshold(double val) {
+    _lightningDetector.manualThreshold = val;
+    notifyListeners();
+  }
+
+  // Audio configuration
+  bool get isAudioAutoMode => _thunderDetector.isAutoMode;
+  void setAudioAutoMode(bool val) {
+    _thunderDetector.isAutoMode = val;
+    notifyListeners();
+  }
+
   int get minDurationMs => _thunderDetector.minDurationMs;
   void setMinDurationMs(int val) {
     _thunderDetector.minDurationMs = val;

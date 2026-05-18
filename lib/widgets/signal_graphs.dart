@@ -6,12 +6,14 @@ class SignalGraphsWidget extends StatefulWidget {
   final Stream<double> brightnessStream;
   final Stream<double> amplitudeStream;
   final Stream<List<double>> frequencyStream;
+  final double maxFreq;
 
   const SignalGraphsWidget({
     Key? key,
     required this.brightnessStream,
     required this.amplitudeStream,
     required this.frequencyStream,
+    required this.maxFreq,
   }) : super(key: key);
 
   @override
@@ -104,7 +106,7 @@ class _SignalGraphsWidgetState extends State<SignalGraphsWidget> {
             height: 60,
             width: double.infinity,
             child: CustomPaint(
-              painter: _SpectrumPainter(_latestSpectrum, Colors.greenAccent),
+              painter: _SpectrumPainter(_latestSpectrum, widget.maxFreq),
             ),
           ),
         ],
@@ -115,30 +117,35 @@ class _SignalGraphsWidgetState extends State<SignalGraphsWidget> {
 
 class _SpectrumPainter extends CustomPainter {
   final List<double> spectrum;
-  final Color color;
+  final double maxFreq;
 
-  _SpectrumPainter(this.spectrum, this.color);
+  _SpectrumPainter(this.spectrum, this.maxFreq);
 
   @override
   void paint(Canvas canvas, Size size) {
     if (spectrum.isEmpty) return;
 
     final Rect rect = Offset.zero & size;
-    final paint = Paint()
-      ..shader = const LinearGradient(
-        colors: [
-          Colors.red,
-          Colors.orange,
-          Colors.yellow,
-          Colors.green,
-          Colors.blue,
-          Colors.purple,
-        ],
-      ).createShader(rect)
+    final gradientShader = const LinearGradient(
+      colors: [
+        Colors.red,
+        Colors.orange,
+        Colors.yellow,
+        Colors.green,
+        Colors.blue,
+        Colors.purple,
+      ],
+    ).createShader(rect);
+
+    final activePaint = Paint()
+      ..shader = gradientShader
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    final path = Path();
+    final inactivePaint = Paint()
+      ..color = Colors.grey.withValues(alpha: 0.3)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
     
     // Freq resolution is 7.8Hz. We want up to 1000Hz, which is about 128 bins.
     final int maxBins = spectrum.length > 128 ? 128 : spectrum.length;
@@ -151,20 +158,25 @@ class _SpectrumPainter extends CustomPainter {
     }
 
     for (int i = 0; i < maxBins; i++) {
+      final double freq = i * 7.8; // 8000Hz / 1024 bins approx 7.81Hz per bin
+      final bool isActive = freq >= 20.0 && freq <= maxFreq;
+      
       final double x = i * stepX;
       double normalized = spectrum[i] / maxVal;
       if (normalized > 1.0) normalized = 1.0;
       
       final double y = size.height - (normalized * size.height);
       
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
+      // Draw line segment for each bin so we can color independently
+      if (i > 0) {
+        final double prevX = (i - 1) * stepX;
+        double prevNormalized = spectrum[i - 1] / maxVal;
+        if (prevNormalized > 1.0) prevNormalized = 1.0;
+        final double prevY = size.height - (prevNormalized * size.height);
+        
+        canvas.drawLine(Offset(prevX, prevY), Offset(x, y), isActive ? activePaint : inactivePaint);
       }
     }
-
-    canvas.drawPath(path, paint);
   }
 
   @override

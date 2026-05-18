@@ -25,7 +25,13 @@ class ThunderDetector {
   // State for duration tracking
   DateTime? _thunderStartTime;
   
+  // Ambient tracking
+  final int _historyLength = 40; // Approx 5 seconds at ~8Hz
+  final List<double> _rmsHistory = [];
+
   // Configuration thresholds
+  bool isAutoMode = false;
+  double audioMultiplier = 3.0;
   double rmsThreshold = 0.05; 
   int minDurationMs = 300;
   final Duration maxDuration = const Duration(seconds: 5);
@@ -138,7 +144,19 @@ class ThunderDetector {
     
     _amplitudeStreamController.add(rms);
 
-    if (rms < rmsThreshold) {
+    // Update rolling average for Auto mode
+    _rmsHistory.add(rms);
+    if (_rmsHistory.length > _historyLength) {
+      _rmsHistory.removeAt(0);
+    }
+
+    double currentRmsThreshold = rmsThreshold;
+    if (isAutoMode && _rmsHistory.length >= 10) {
+      final averageRms = _rmsHistory.reduce((a, b) => a + b) / _rmsHistory.length;
+      currentRmsThreshold = averageRms * audioMultiplier;
+    }
+
+    if (rms < currentRmsThreshold) {
       _evaluateThunderDuration();
       _thunderStartTime = null; // Reset
       return;
