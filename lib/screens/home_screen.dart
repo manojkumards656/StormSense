@@ -245,6 +245,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             const Text("Filter Tuning (Advanced)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 16),
             
+            // Auto Calibration Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => appState.toggleCalibration(),
+                icon: Icon(appState.isCalibrating ? Icons.stop : Icons.mic),
+                label: Text(appState.isCalibrating ? "Stop Recording & Tune" : "Record Thunder Sample"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appState.isCalibrating ? AppTheme.criticalColor : AppTheme.accentColor,
+                  foregroundColor: appState.isCalibrating ? Colors.white : AppTheme.primaryDark,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
             // RMS Threshold
             Row(
               children: [
@@ -254,10 +269,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Expanded(
                   child: Slider(
                     value: appState.rmsThreshold,
-                    min: 0.01,
-                    max: 0.5,
-                    divisions: 49,
-                    label: appState.rmsThreshold.toStringAsFixed(2),
+                    min: 0.001,
+                    max: 1.0,
+                    divisions: 100,
+                    label: appState.rmsThreshold.toStringAsFixed(3),
                     onChanged: (val) {
                       appState.setRmsThreshold(val);
                     },
@@ -276,9 +291,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Expanded(
                   child: Slider(
                     value: appState.lowFreqEnergyRatio,
-                    min: 0.1,
-                    max: 0.9,
-                    divisions: 80,
+                    min: 0.01,
+                    max: 1.0,
+                    divisions: 100,
                     label: appState.lowFreqEnergyRatio.toStringAsFixed(2),
                     onChanged: (val) {
                       appState.setLowFreqEnergyRatio(val);
@@ -286,6 +301,50 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 Text(appState.lowFreqEnergyRatio.toStringAsFixed(2)),
+              ],
+            ),
+
+            // Min Duration
+            Row(
+              children: [
+                const Icon(Icons.timer, color: AppTheme.textMuted),
+                const SizedBox(width: 8),
+                const Text("Min Time:"),
+                Expanded(
+                  child: Slider(
+                    value: appState.minDurationMs.toDouble(),
+                    min: 50,
+                    max: 1000,
+                    divisions: 95,
+                    label: "${appState.minDurationMs}ms",
+                    onChanged: (val) {
+                      appState.setMinDurationMs(val.round());
+                    },
+                  ),
+                ),
+                Text("${appState.minDurationMs}ms"),
+              ],
+            ),
+
+            // Max Freq
+            Row(
+              children: [
+                const Icon(Icons.waves, color: AppTheme.textMuted),
+                const SizedBox(width: 8),
+                const Text("Max Freq:"),
+                Expanded(
+                  child: Slider(
+                    value: appState.maxFreq,
+                    min: 100,
+                    max: 2000,
+                    divisions: 190,
+                    label: "${appState.maxFreq.round()}Hz",
+                    onChanged: (val) {
+                      appState.setMaxFreq(val);
+                    },
+                  ),
+                ),
+                Text("${appState.maxFreq.round()}Hz"),
               ],
             ),
           ],

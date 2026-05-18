@@ -27,16 +27,63 @@ class ThunderDetector {
   
   // Configuration thresholds
   double rmsThreshold = 0.05; 
-  Duration minDuration = const Duration(milliseconds: 300);
+  int minDurationMs = 300;
   final Duration maxDuration = const Duration(seconds: 5);
   final Duration impulseRejectDuration = const Duration(milliseconds: 150);
   
-  // Low frequency band for thunder (20Hz - 300Hz)
+  // Low frequency band for thunder (20Hz - maxFreqHz)
   static const double minFreq = 20.0;
-  static const double maxFreq = 300.0;
+  double maxFreq = 300.0;
   double lowFreqEnergyRatio = 0.5;
   
+  // Calibration State
+  bool _isCalibrating = false;
+  final List<double> _calibrationRms = [];
+  final List<double> _calibrationLfRatios = [];
+
   bool get isMonitoring => _isMonitoring;
+  bool get isCalibrating => _isCalibrating;
+
+  Future<void> startCalibration() async {
+    _calibrationRms.clear();
+    _calibrationLfRatios.clear();
+    _isCalibrating = true;
+    if (!_isMonitoring) {
+      await startMonitoring();
+    }
+  }
+
+  void stopCalibration() {
+    _isCalibrating = false;
+    if (_calibrationRms.isEmpty || _calibrationLfRatios.isEmpty) return;
+
+    // Filter out quiet parts (bottom 25% of RMS)
+    final sortedRms = List<double>.from(_calibrationRms)..sort();
+    final thresholdIndex = (sortedRms.length * 0.25).floor();
+    final activeRmsThreshold = sortedRms[thresholdIndex];
+
+    double sumRms = 0;
+    double sumLfRatio = 0;
+    int count = 0;
+
+    for (int i = 0; i < _calibrationRms.length; i++) {
+      if (_calibrationRms[i] >= activeRmsThreshold) {
+        sumRms += _calibrationRms[i];
+        sumLfRatio += _calibrationLfRatios[i];
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      final averageRms = sumRms / count;
+      final averageLfRatio = sumLfRatio / count;
+
+      rmsThreshold = (averageRms * 0.5).clamp(0.001, 1.0);
+      lowFreqEnergyRatio = (averageLfRatio * 0.8).clamp(0.01, 1.0);
+      
+      debugPrint("Calibrated! New RMS: $rmsThreshold, New LF: $lowFreqEnergyRatio");
+    }
+  }
 
   Future<void> startMonitoring() async {
     if (_isMonitoring) return;
@@ -122,8 +169,15 @@ class ThunderDetector {
       }
     }
     
+    final double lfRatio = totalEnergy > 0 ? (lowFreqEnergy / totalEnergy) : 0;
+    
+    if (_isCalibrating) {
+      _calibrationRms.add(rms);
+      _calibrationLfRatios.add(lfRatio);
+    }
+    
     // Check if dominant energy is in low frequency band
-    if (totalEnergy > 0 && (lowFreqEnergy / totalEnergy) > lowFreqEnergyRatio) {
+    if (totalEnergy > 0 && lfRatio > lowFreqEnergyRatio) {
       if (_thunderStartTime == null) {
         _thunderStartTime = DateTime.now();
       }
@@ -139,6 +193,7 @@ class ThunderDetector {
     
     final duration = DateTime.now().difference(_thunderStartTime!);
     
+    final minDuration = Duration(milliseconds: minDurationMs);
     if (duration > minDuration && duration < maxDuration) {
       // Valid thunder rumble duration
       debugPrint("Thunder detected! Duration: ${duration.inMilliseconds}ms");

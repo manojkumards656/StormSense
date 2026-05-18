@@ -55,6 +55,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get minDurationMs => _thunderDetector.minDurationMs;
+  void setMinDurationMs(int val) {
+    _thunderDetector.minDurationMs = val;
+    notifyListeners();
+  }
+
+  double get maxFreq => _thunderDetector.maxFreq;
+  void setMaxFreq(double val) {
+    _thunderDetector.maxFreq = val;
+    notifyListeners();
+  }
+
   void updateWeather(WeatherConditions conditions) {
     _weatherConditions = conditions;
     _storageService.saveWeatherConditions(conditions);
@@ -67,6 +79,20 @@ class AppState extends ChangeNotifier {
     } else {
       await _stopMonitoring();
     }
+  }
+
+  bool get isCalibrating => _thunderDetector.isCalibrating;
+
+  Future<void> toggleCalibration() async {
+    if (_thunderDetector.isCalibrating) {
+      _thunderDetector.stopCalibration();
+      if (_status == AppStatus.idle) {
+        await _thunderDetector.stopMonitoring();
+      }
+    } else {
+      await _thunderDetector.startCalibration();
+    }
+    notifyListeners();
   }
 
   Future<void> _startMonitoring() async {
