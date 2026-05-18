@@ -41,6 +41,19 @@ class AppState extends ChangeNotifier {
   Stream<double> get brightnessStream => _lightningDetector.brightnessStream;
   Stream<double> get amplitudeStream => _thunderDetector.amplitudeStream;
 
+  // Tuning thresholds
+  double get rmsThreshold => _thunderDetector.rmsThreshold;
+  void setRmsThreshold(double val) {
+    _thunderDetector.rmsThreshold = val;
+    notifyListeners();
+  }
+
+  double get lowFreqEnergyRatio => _thunderDetector.lowFreqEnergyRatio;
+  void setLowFreqEnergyRatio(double val) {
+    _thunderDetector.lowFreqEnergyRatio = val;
+    notifyListeners();
+  }
+
   void updateWeather(WeatherConditions conditions) {
     _weatherConditions = conditions;
     _storageService.saveWeatherConditions(conditions);

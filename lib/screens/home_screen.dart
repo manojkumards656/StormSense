@@ -76,6 +76,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               const SizedBox(height: 24),
               _buildWeatherConfig(appState),
               const SizedBox(height: 24),
+              _buildTuningConfig(appState),
+              const SizedBox(height: 24),
               
               const Text("Strike History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
@@ -231,4 +233,64 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
+
+  Widget _buildTuningConfig(AppState appState) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Filter Tuning (Advanced)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 16),
+            
+            // RMS Threshold
+            Row(
+              children: [
+                const Icon(Icons.volume_up, color: AppTheme.textMuted),
+                const SizedBox(width: 8),
+                const Text("Min Vol:"),
+                Expanded(
+                  child: Slider(
+                    value: appState.rmsThreshold,
+                    min: 0.01,
+                    max: 0.5,
+                    divisions: 49,
+                    label: appState.rmsThreshold.toStringAsFixed(2),
+                    onChanged: (val) {
+                      appState.setRmsThreshold(val);
+                    },
+                  ),
+                ),
+                Text(appState.rmsThreshold.toStringAsFixed(2)),
+              ],
+            ),
+            
+            // Low Freq Energy Ratio
+            Row(
+              children: [
+                const Icon(Icons.graphic_eq, color: AppTheme.textMuted),
+                const SizedBox(width: 8),
+                const Text("LF Ratio:"),
+                Expanded(
+                  child: Slider(
+                    value: appState.lowFreqEnergyRatio,
+                    min: 0.1,
+                    max: 0.9,
+                    divisions: 80,
+                    label: appState.lowFreqEnergyRatio.toStringAsFixed(2),
+                    onChanged: (val) {
+                      appState.setLowFreqEnergyRatio(val);
+                    },
+                  ),
+                ),
+                Text(appState.lowFreqEnergyRatio.toStringAsFixed(2)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+

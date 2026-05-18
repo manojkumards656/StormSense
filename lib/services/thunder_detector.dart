@@ -23,14 +23,15 @@ class ThunderDetector {
   DateTime? _thunderStartTime;
   
   // Configuration thresholds
-  final double rmsThreshold = 0.05; 
-  final Duration minDuration = const Duration(milliseconds: 300);
+  double rmsThreshold = 0.05; 
+  Duration minDuration = const Duration(milliseconds: 300);
   final Duration maxDuration = const Duration(seconds: 5);
   final Duration impulseRejectDuration = const Duration(milliseconds: 150);
   
   // Low frequency band for thunder (20Hz - 300Hz)
   static const double minFreq = 20.0;
   static const double maxFreq = 300.0;
+  double lowFreqEnergyRatio = 0.5;
   
   bool get isMonitoring => _isMonitoring;
 
@@ -117,8 +118,8 @@ class ThunderDetector {
       }
     }
     
-    // Check if dominant energy is in low frequency band (>50%)
-    if (totalEnergy > 0 && (lowFreqEnergy / totalEnergy) > 0.5) {
+    // Check if dominant energy is in low frequency band
+    if (totalEnergy > 0 && (lowFreqEnergy / totalEnergy) > lowFreqEnergyRatio) {
       if (_thunderStartTime == null) {
         _thunderStartTime = DateTime.now();
       }
