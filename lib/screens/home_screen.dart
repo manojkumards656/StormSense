@@ -71,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 SignalGraphsWidget(
                   brightnessStream: appState.brightnessStream,
                   amplitudeStream: appState.amplitudeStream,
+                  frequencyStream: appState.frequencyStream,
                 ),
                 
               const SizedBox(height: 24),

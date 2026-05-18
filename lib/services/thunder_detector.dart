@@ -17,6 +17,9 @@ class ThunderDetector {
   final _amplitudeStreamController = StreamController<double>.broadcast();
   Stream<double> get amplitudeStream => _amplitudeStreamController.stream;
 
+  final _frequencyStreamController = StreamController<List<double>>.broadcast();
+  Stream<List<double>> get frequencyStream => _frequencyStreamController.stream;
+
   Function()? onThunderDetected;
 
   // State for duration tracking
@@ -100,6 +103,7 @@ class ThunderDetector {
     
     // Compute magnitude spectrum
     final magnitudes = freqData.discardConjugates().magnitudes();
+    _frequencyStreamController.add(magnitudes);
     
     // 3. Analyze low-frequency band
     // Frequency resolution = sampleRate / bufferSize (e.g. 8000/1024 = 7.8Hz per bin)
@@ -146,6 +150,7 @@ class ThunderDetector {
   void dispose() {
     stopMonitoring();
     _amplitudeStreamController.close();
+    _frequencyStreamController.close();
     _audioRecorder.dispose();
   }
 }

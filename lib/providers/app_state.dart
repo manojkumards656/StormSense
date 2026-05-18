@@ -40,6 +40,7 @@ class AppState extends ChangeNotifier {
   
   Stream<double> get brightnessStream => _lightningDetector.brightnessStream;
   Stream<double> get amplitudeStream => _thunderDetector.amplitudeStream;
+  Stream<List<double>> get frequencyStream => _thunderDetector.frequencyStream;
 
   // Tuning thresholds
   double get rmsThreshold => _thunderDetector.rmsThreshold;
