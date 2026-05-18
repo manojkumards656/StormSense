@@ -3,11 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/app_state.dart';
-import '../models/weather_conditions.dart';
 import '../theme/app_theme.dart';
-import '../widgets/safety_banner.dart';
-import '../widgets/signal_graphs.dart';
-import '../widgets/strike_history.dart';
+import 'tabs/dashboard_tab.dart';
+import 'tabs/history_tab.dart';
+import 'tabs/tuning_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,21 +15,18 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+
+  final List<Widget> _tabs = const [
+    DashboardTab(),
+    HistoryTab(),
+    TuningTab(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-    
     _requestPermissions();
   }
 
@@ -42,357 +38,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
-
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('StormSense'),
+        title: const Text('StormSense', style: TextStyle(fontWeight: FontWeight.w800)),
+        backgroundColor: Colors.transparent,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (appState.lastEstimatedDistanceKm != null)
-                SafetyBanner(distanceKm: appState.lastEstimatedDistanceKm!),
-                
-              _buildStatusCard(appState),
-              const SizedBox(height: 24),
-              
-              if (appState.status != AppStatus.idle)
-                SignalGraphsWidget(
-                  brightnessStream: appState.brightnessStream,
-                  amplitudeStream: appState.amplitudeStream,
-                  frequencyStream: appState.frequencyStream,
-                  maxFreq: appState.maxFreq,
-                ),
-                
-              const SizedBox(height: 24),
-              _buildWeatherConfig(appState),
-              const SizedBox(height: 24),
-              _buildTuningConfig(appState),
-              const SizedBox(height: 24),
-              
-              const Text("Strike History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              StrikeHistoryWidget(records: appState.strikeHistory),
-            ],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _tabs,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.radar),
+            label: 'Radar',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusCard(AppState appState) {
-    bool isMonitoring = appState.status != AppStatus.idle;
-    
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            if (appState.status == AppStatus.flashDetected) ...[
-              const Icon(Icons.flash_on, color: Colors.yellow, size: 48),
-              const SizedBox(height: 8),
-              Text(
-                "${appState.elapsedSeconds.toStringAsFixed(1)}s",
-                style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
-              ),
-              const Text("Listening for thunder...", style: TextStyle(color: AppTheme.textMuted)),
-            ] else if (appState.lastEstimatedDistanceKm != null) ...[
-              const Icon(Icons.thunderstorm, color: AppTheme.accentColor, size: 48),
-              const SizedBox(height: 8),
-              Text(
-                "${appState.lastEstimatedDistanceKm!.toStringAsFixed(2)} km",
-                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-              ),
-              const Text("Last estimated distance", style: TextStyle(color: AppTheme.textMuted)),
-            ] else ...[
-              Icon(
-                isMonitoring ? Icons.radar : Icons.shield,
-                color: isMonitoring ? AppTheme.accentColor : AppTheme.textMuted,
-                size: 48,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                isMonitoring ? "Monitoring environment" : "Ready to detect",
-                style: const TextStyle(fontSize: 18, color: AppTheme.textMuted),
-              ),
-            ],
-            
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => appState.toggleMonitoring(),
-              icon: Icon(isMonitoring ? Icons.stop : Icons.play_arrow),
-              label: Text(isMonitoring ? "Stop Monitoring" : "Start Monitoring"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isMonitoring ? AppTheme.criticalColor : AppTheme.accentColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeatherConfig(AppState appState) {
-    final weather = appState.weatherConditions;
-    
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Weather Adjustments", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 16),
-            
-            // Temperature Slider
-            Row(
-              children: [
-                const Icon(Icons.thermostat, color: AppTheme.textMuted),
-                const SizedBox(width: 8),
-                const Text("Temp:"),
-                Expanded(
-                  child: Slider(
-                    value: weather.temperatureCelsius,
-                    min: -10,
-                    max: 45,
-                    divisions: 55,
-                    label: "${weather.temperatureCelsius.round()}°C",
-                    onChanged: (val) {
-                      appState.updateWeather(weather.copyWith(temperatureCelsius: val));
-                    },
-                  ),
-                ),
-                Text("${weather.temperatureCelsius.round()}°C"),
-              ],
-            ),
-            
-            // Humidity Dropdown
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.water_drop, color: AppTheme.textMuted),
-                    SizedBox(width: 8),
-                    Text("Humidity:"),
-                  ],
-                ),
-                DropdownButton<HumidityLevel>(
-                  value: weather.humidity,
-                  dropdownColor: AppTheme.secondaryDark,
-                  items: HumidityLevel.values.map((h) {
-                    return DropdownMenuItem(
-                      value: h,
-                      child: Text(h.name.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) appState.updateWeather(weather.copyWith(humidity: val));
-                  },
-                ),
-              ],
-            ),
-            
-            // Wind Dropdown
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.air, color: AppTheme.textMuted),
-                    SizedBox(width: 8),
-                    Text("Wind:"),
-                  ],
-                ),
-                DropdownButton<WindLevel>(
-                  value: weather.wind,
-                  dropdownColor: AppTheme.secondaryDark,
-                  items: WindLevel.values.map((w) {
-                    return DropdownMenuItem(
-                      value: w,
-                      child: Text(w.name.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) appState.updateWeather(weather.copyWith(wind: val));
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTuningConfig(AppState appState) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Detection Modes & Tuning", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 16),
-
-            // Light Detection Mode
-            SwitchListTile(
-              title: const Text("Light: Auto Mode"),
-              subtitle: const Text("Learns ambient brightness"),
-              value: appState.isLightAutoMode,
-              onChanged: (val) => appState.setLightAutoMode(val),
-              activeColor: AppTheme.accentColor,
-            ),
-            if (!appState.isLightAutoMode)
-              Row(
-                children: [
-                  const Icon(Icons.lightbulb, color: AppTheme.textMuted),
-                  const SizedBox(width: 8),
-                  const Text("Min Brightness:"),
-                  Expanded(
-                    child: Slider(
-                      value: appState.manualLightThreshold,
-                      min: 10.0,
-                      max: 255.0,
-                      divisions: 245,
-                      label: appState.manualLightThreshold.round().toString(),
-                      onChanged: (val) => appState.setManualLightThreshold(val),
-                    ),
-                  ),
-                  Text(appState.manualLightThreshold.round().toString()),
-                ],
-              ),
-            
-            const Divider(),
-
-            // Audio Detection Mode
-            SwitchListTile(
-              title: const Text("Audio: Auto Mode"),
-              subtitle: const Text("Learns ambient background noise"),
-              value: appState.isAudioAutoMode,
-              onChanged: (val) => appState.setAudioAutoMode(val),
-              activeColor: AppTheme.accentColor,
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Auto Calibration Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => appState.toggleCalibration(),
-                icon: Icon(appState.isCalibrating ? Icons.stop : Icons.mic),
-                label: Text(appState.isCalibrating ? "Stop Recording & Tune" : "Record Thunder Sample"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: appState.isCalibrating ? AppTheme.criticalColor : AppTheme.accentColor,
-                  foregroundColor: appState.isCalibrating ? Colors.white : AppTheme.primaryDark,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // RMS Threshold
-            Row(
-              children: [
-                const Icon(Icons.volume_up, color: AppTheme.textMuted),
-                const SizedBox(width: 8),
-                const Text("Min Vol:"),
-                Expanded(
-                  child: Slider(
-                    value: appState.rmsThreshold,
-                    min: 0.001,
-                    max: 1.0,
-                    divisions: 100,
-                    label: appState.rmsThreshold.toStringAsFixed(3),
-                    onChanged: (val) {
-                      appState.setRmsThreshold(val);
-                    },
-                  ),
-                ),
-                Text(appState.rmsThreshold.toStringAsFixed(2)),
-              ],
-            ),
-            
-            // Low Freq Energy Ratio
-            Row(
-              children: [
-                const Icon(Icons.graphic_eq, color: AppTheme.textMuted),
-                const SizedBox(width: 8),
-                const Text("LF Ratio:"),
-                Expanded(
-                  child: Slider(
-                    value: appState.lowFreqEnergyRatio,
-                    min: 0.01,
-                    max: 1.0,
-                    divisions: 100,
-                    label: appState.lowFreqEnergyRatio.toStringAsFixed(2),
-                    onChanged: (val) {
-                      appState.setLowFreqEnergyRatio(val);
-                    },
-                  ),
-                ),
-                Text(appState.lowFreqEnergyRatio.toStringAsFixed(2)),
-              ],
-            ),
-
-            // Min Duration
-            Row(
-              children: [
-                const Icon(Icons.timer, color: AppTheme.textMuted),
-                const SizedBox(width: 8),
-                const Text("Min Time:"),
-                Expanded(
-                  child: Slider(
-                    value: appState.minDurationMs.toDouble(),
-                    min: 50,
-                    max: 1000,
-                    divisions: 95,
-                    label: "${appState.minDurationMs}ms",
-                    onChanged: (val) {
-                      appState.setMinDurationMs(val.round());
-                    },
-                  ),
-                ),
-                Text("${appState.minDurationMs}ms"),
-              ],
-            ),
-
-            // Max Freq
-            Row(
-              children: [
-                const Icon(Icons.waves, color: AppTheme.textMuted),
-                const SizedBox(width: 8),
-                const Text("Max Freq:"),
-                Expanded(
-                  child: Slider(
-                    value: appState.maxFreq,
-                    min: 100,
-                    max: 2000,
-                    divisions: 190,
-                    label: "${appState.maxFreq.round()}Hz",
-                    onChanged: (val) {
-                      appState.setMaxFreq(val);
-                    },
-                  ),
-                ),
-                Text("${appState.maxFreq.round()}Hz"),
-              ],
-            ),
-          ],
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.tune),
+            label: 'Tuning',
+          ),
+        ],
       ),
     );
   }
 }
+
 

@@ -37,10 +37,13 @@ class StormSenseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Watch AppState for theme color changes
+    final appState = context.watch<AppState>();
+
     return MaterialApp(
       title: 'StormSense',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.getDarkTheme(appState.accentColor),
       home: const HomeScreen(),
     );
   }

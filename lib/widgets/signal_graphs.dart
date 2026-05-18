@@ -59,7 +59,7 @@ class _SignalGraphsWidgetState extends State<SignalGraphsWidget> {
       children: [
         _buildGraph("Camera Brightness", _brightnessData.toList(), Colors.yellow, 255.0),
         const SizedBox(height: 16),
-        _buildGraph("Mic Amplitude (RMS)", _amplitudeData.toList(), AppTheme.accentColor, 1.0),
+        _buildGraph("Mic Amplitude (RMS)", _amplitudeData.toList(), Theme.of(context).colorScheme.primary, 1.0),
         const SizedBox(height: 16),
         _buildSpectrumGraph("Frequency Spectrum (0-1000Hz)"),
       ],

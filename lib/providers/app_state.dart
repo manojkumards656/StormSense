@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import '../models/weather_conditions.dart';
 import '../models/strike_record.dart';
@@ -23,6 +24,8 @@ class AppState extends ChangeNotifier {
   double _elapsedSeconds = 0.0;
   
   double? _lastEstimatedDistanceKm;
+  
+  Color _accentColor = const Color(0xFF0EA5E9);
 
   AppState(this._storageService, this._lightningDetector, this._thunderDetector)
       : _weatherConditions = _storageService.getWeatherConditions() {
@@ -37,6 +40,12 @@ class AppState extends ChangeNotifier {
   List<StrikeRecord> get strikeHistory => _strikeHistory;
   double get elapsedSeconds => _elapsedSeconds;
   double? get lastEstimatedDistanceKm => _lastEstimatedDistanceKm;
+  Color get accentColor => _accentColor;
+  
+  void setAccentColor(Color color) {
+    _accentColor = color;
+    notifyListeners();
+  }
   
   Stream<double> get brightnessStream => _lightningDetector.brightnessStream;
   Stream<double> get amplitudeStream => _thunderDetector.amplitudeStream;
